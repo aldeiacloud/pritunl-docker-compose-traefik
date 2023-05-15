@@ -1,0 +1,71 @@
+version: "3"
+
+services:
+  mongo:
+    image: mongo:latest
+    container_name: pritunldb
+    restart: always
+    hostname: pritunldb
+    volumes:
+      - ./db:/data/db
+
+  pritunl:
+    image: goofball222/pritunl:latest
+    container_name: pritunl
+    restart: always
+    hostname: pritunl
+    depends_on:
+      - mongo
+    privileged: true
+    sysctls:
+      - net.ipv6.conf.all.disable_ipv6=0
+    links:
+      - mongo
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - 10447:10447/udp
+    expose:
+      - 443
+    environment:
+      - TZ=America/Sao_Paulo
+      - MONGODB_URI=mongodb://mongo:27017/pritunl
+      - REVERSE_PROXY=true
+      - WIREGUARD=true
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.pritunl.service=pritunl"
+      - "traefik.http.services.pritunl.loadbalancer.server.port=443"
+      - "traefik.http.services.pritunl.loadbalancer.server.scheme=https"
+      - "traefik.http.routers.pritunl.rule=Host(`vpn.aldeiacloud.com.br`)"
+      - "traefik.http.routers.pritunl.tls.certresolver=leresolver"
+      - "traefik.http.routers.pritunl.entrypoints=websecure"
+
+  traefik:
+    image: traefik:v2.2
+    container_name: traefik
+    restart: always
+    command:
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --providers.docker=true
+      - --api
+      - --certificatesresolvers.leresolver.acme.email=contato@aldeiacloud.com.br
+      - --certificatesresolvers.leresolver.acme.storage=/acme.json
+      - --certificatesresolvers.leresolver.acme.tlschallenge=true
+      - --serverstransport.insecureskipverify=true
+      - --providers.file.filename=/dynamic_conf.yml
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+      - "./letsencrypt/acme.json:/acme.json"
+      - "./traefik.yml:/dynamic_conf.yml"
+    labels:
+      # global redirect to https
+      - "traefik.http.routers.http-catchall.rule=hostregexp(`{host:.+}`)"
+      - "traefik.http.routers.http-catchall.entrypoints=web"
+      - "traefik.http.routers.http-catchall.middlewares=redirect-to-https"
+      # middleware redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
