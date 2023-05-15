@@ -17,4 +17,3 @@ SSL Labs (Screenshot 1)<br>
 ![alt text](https://raw.githubusercontent.com/aldeiacloud/pritunl-docker-compose-traefik/main/images-ssl-labs/ssl-labs1.png)<br><br>
 SSL Labs (Screenshot 2)<br>
 ![alt text](https://raw.githubusercontent.com/aldeiacloud/pritunl-docker-compose-traefik/main/images-ssl-labs/ssl-labs2.png)
-
